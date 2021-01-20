@@ -1,4 +1,5 @@
 import environ
+import os
 
 from pathlib import Path
 
@@ -11,17 +12,16 @@ env = environ.Env(
     DEBUG=(bool, True),
     ENVIRONMENT=(str, 'DEVELOPMENT'),
     ALLOWED_HOSTS=(list, []),
-
     LAKE_DB_NAME=(str, ""),
     LAKE_DB_USER=(str, ""),
     LAKE_DB_PASSWORD=(str, ""),
     LAKE_DB_HOST=(str, ""),
-    LAKE_DB_PORT=(str, ""),
+    LAKE_DB_PORT=(int, None),
     MART_DB_NAME=(str, ""),
     MART_DB_USER=(str, ""),
     MART_DB_PASSWORD=(str, ""),
     MART_DB_HOST=(str, ""),
-    MART_DB_PORT=(str, ""),
+    MART_DB_PORT=(int, None),
     LAKE_MSSQL_DB_NAME=(str, ""),
     LAKE_MSSQL_DB_USER=(str, ""),
     LAKE_MSSQL_DB_PASSWORD=(str, ""),
@@ -37,6 +37,21 @@ DEVELOPMENT = 'DEVELOPMENT'
 STAGING = 'STAGING'
 PRODUCTION = 'PRODUCTION'
 ENVIRONMENT = env('ENVIRONMENT')
+
+LAKE_DB_NAME=env('LAKE_DB_NAME')
+LAKE_DB_USER=env('LAKE_DB_USER')
+LAKE_DB_PASSWORD=env('LAKE_DB_PASSWORD')
+LAKE_DB_HOST=env('LAKE_DB_HOST')
+LAKE_DB_PORT=env('LAKE_DB_PORT')
+MART_DB_NAME=env('MART_DB_NAME')
+MART_DB_USER=env('MART_DB_USER')
+MART_DB_PASSWORD=env('MART_DB_PASSWORD')
+MART_DB_HOST=env('MART_DB_HOST')
+MART_DB_PORT=env('MART_DB_PORT')
+LAKE_MSSQL_DB_NAME=env('LAKE_MSSQL_DB_NAME')
+LAKE_MSSQL_DB_USER=env('LAKE_MSSQL_DB_USER')
+LAKE_MSSQL_DB_PASSWORD=env('LAKE_MSSQL_DB_PASSWORD')
+LAKE_MSSQL_DB_HOST=env('LAKE_MSSQL_DB_HOST')
 
 # Application definition
 
@@ -88,12 +103,12 @@ WSGI_APPLICATION = 'aquila.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': env('LAKE_DB_NAME'),
-        'USER': env('LAKE_DB_USER'),
-        'PASSWORD': env('LAKE_DB_PASSWORD'),
-        'HOST': env('LAKE_DB_HOST'),
-        'PORT': '5432',
-    },
+        'NAME': env('MART_DB_NAME'),
+        'USER': env('MART_DB_USER'),
+        'PASSWORD': env('MART_DB_PASSWORD'),
+        'HOST': env('MART_DB_HOST'),
+        'PORT': env('MART_DB_PORT'),
+    }
 }
 
 
@@ -135,6 +150,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -143,6 +160,5 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
