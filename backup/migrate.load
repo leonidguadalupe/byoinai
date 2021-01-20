@@ -1,0 +1,5 @@
+load database
+    from mssql://SA:p@@ssw0rdm1cr0s0ft@192.168.65.2/mssqldb
+    into postgresql://aquila:pa33sw0rd@db:5432/lake
+    alter schema 'dbo' rename to 'public'
+set work_mem to '1024MB', maintenance_work_mem to '1024MB';
