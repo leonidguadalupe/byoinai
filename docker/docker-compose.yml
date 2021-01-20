@@ -16,25 +16,27 @@ services:
             context: "../"
             dockerfile: docker/postgresDockerfile
         ports:
-            - "5432:5432"
+            - "5433:5432"
         environment:
             - POSTGRES_USER=${LAKE_DB_USER}
             - POSTGRES_PASSWORD=${LAKE_DB_PASSWORD}
             - POSTGRES_DB=${LAKE_DB_NAME}
+            - POSTGRES_HOST=${LAKE_DB_HOST}
         volumes:
-            - store_lake:/var/lib/postgresql
+            - store_lake:/var/lib/postgresql/data
             - ../backup/migrate.load:/migrate.load
     db_mart:
         container_name: postgres
         image: postgres:latest
         ports:
-            - "5433:5433"
+            - "5432:5432"
         environment:
             - POSTGRES_USER=${MART_DB_USER}
             - POSTGRES_PASSWORD=${MART_DB_PASSWORD}
             - POSTGRES_DB=${MART_DB_NAME}
+            - POSTGRES_HOST=${MART_DB_HOST}
         volumes:
-            - store_mart:/var/lib/postgresql
+            - store_mart:/var/lib/postgresql/data
     app:
         build:
             context: "../"
