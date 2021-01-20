@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from typing import List, Iterable
 from collections import defaultdict
 from psycopg2 import sql
-from psycopg2.extensions import AsIs
+
 class Postgres(object):
     def __init__(self, obj, mssql_data, pknames, pks):
         self.cursor = obj.postgres_cursor
@@ -31,6 +31,7 @@ class Postgres(object):
 
                     self.all_data = mssql_data
                     self.store_data_db(cursor, conn)
+                    self.delete_outdated_data(cursor, conn)
 
     def get_tables(self, cursor) -> None:
         cursor.execute("""
@@ -59,6 +60,7 @@ class Postgres(object):
             for table in self.tables:
                 columns = copy.deepcopy(self.table_columns[table])
                 pk = self.primary_keys_names[table].lower()
+
                 ## unpacking values to dynamically create sql queries through
                 ## iterating tables. using composed elements with sql.
                 column_str = sql.SQL(', ').join([sql.Identifier(xa) for xa in columns])
@@ -97,3 +99,24 @@ class Postgres(object):
                     cursor.execute(insert_sql, values_list)
 
             conn.commit()
+
+    def delete_outdated_data(self, cursor, conn) -> None:
+        for table in self.tables:
+            external_keys = self.primary_keys[table]
+            pk = self.primary_keys_names[table].lower()
+
+            sel_sql = sql.SQL("""SELECT {} FROM {}""").format(sql.Identifier(pk), sql.Identifier(table))
+            cursor.execute(sel_sql)
+
+            internal_keys = [row[0] for row in cursor]
+            ## best way to make this scalable is make a temporary table, load all keys, select from it
+            ## then delete out of sync items
+            to_be_deleted = list(set(internal_keys) - set(external_keys))
+            ## adding %s placeholders for the values
+            if to_be_deleted:
+                placeholder = sql.SQL(', ').join(sql.Placeholder() * len(to_be_deleted))
+                del_sql = sql.SQL("""DELETE FROM {} WHERE {} in ({})""").format(
+                                sql.Identifier(table),
+                                sql.Identifier(pk), placeholder)
+                print(del_sql)
+                cursor.execute(del_sql, to_be_deleted)
