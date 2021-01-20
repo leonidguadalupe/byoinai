@@ -1,0 +1,6 @@
+FROM postgres:latest
+RUN apt-get update
+RUN apt-get install -y wget sudo pgloader
+copy backup/migrate.load .
+copy backup/.freetds.conf /root
+copy backup/.freetds.conf .
