@@ -1,0 +1,5 @@
+static
+!api/static/
+**/__pycache__/
+.env
+.DS_Store
