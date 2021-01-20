@@ -11,14 +11,7 @@ env = environ.Env(
     DEBUG=(bool, True),
     ENVIRONMENT=(str, 'DEVELOPMENT'),
     ALLOWED_HOSTS=(list, []),
-    DATABASE=(dict, {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'defaulthegp',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'hegp_db',
-        'PORT': '3306',
-    }),
+
     LAKE_DB_NAME=(str, ""),
     LAKE_DB_USER=(str, ""),
     LAKE_DB_PASSWORD=(str, ""),
@@ -93,7 +86,14 @@ WSGI_APPLICATION = 'aquila.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env('DATABASE'),
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': env('LAKE_DB_NAME'),
+        'USER': env('LAKE_DB_USER'),
+        'PASSWORD': env('LAKE_DB_PASSWORD'),
+        'HOST': env('LAKE_DB_HOST'),
+        'PORT': '5432',
+    },
 }
 
 
