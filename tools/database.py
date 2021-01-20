@@ -58,13 +58,3 @@ class DatabaseHelper(object, metaclass=DatabaseMeta):
 
         if 'mssql' in kwargs:
             self.mssql = kwargs['mssql']
-
-
-
-#helper = DatabaseHelper(mssql=mssql_obj, postgresql=psql_obj)
-#print('success')
-#a = Mssql(helper)
-# print(a.tables)
-# print(a.table_columns)
-# print(a.primary_keys)
-#print(a.all_data['departments']['18'])
