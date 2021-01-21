@@ -2,17 +2,11 @@ import psycopg2
 import pymssql
 import socket
 
-from collections import defaultdict
-# from aquila.settings import (
-#     LAKE_DB_NAME, LAKE_DB_USER, LAKE_DB_PASSWORD,
-#     LAKE_MSSQL_DB_NAME, LAKE_MSSQL_DB_USER, LAKE_MSSQL_DB_PASSWORD,
-#     LAKE_MSSQL_DB_HOST
-# )
 
 class DatabaseMeta(type):
     """
-        Metaclass for auto creation of cursors. This will make things more scalable
-        as we add more databases to work with.
+        Metaclass for auto creation of cursors. This will make
+        things more scalable as we add more databases to work with.
     """
     def __call__(cls, *args, **kwargs):
         obj = type.__call__(cls, *args, **kwargs)
@@ -46,10 +40,15 @@ class DatabaseMeta(type):
             except KeyError as e:
                 raise Exception(e)
 
-            obj.postgres_conn = psycopg2.connect("dbname='{}' user='{}' host='{}' password='{}'".format(database, user, host, password))
+            obj.postgres_conn = psycopg2.connect(
+                "dbname='{}' user='{}' host='{}' password='{}'".format(
+                    database, user, host, password)
+                )
+
             obj.postgres_cursor = obj.postgres_conn.cursor()
 
         return obj
+
 
 class DatabaseHelper(object, metaclass=DatabaseMeta):
     def __init__(self, **kwargs):

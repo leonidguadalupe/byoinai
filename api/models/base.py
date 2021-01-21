@@ -8,4 +8,4 @@ class BaseModel(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
 
     class Meta:
-        abstract=True
+        abstract = True

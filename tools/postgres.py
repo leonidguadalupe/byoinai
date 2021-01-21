@@ -125,7 +125,7 @@ class Postgres(object):
             except IndexError as e:
                 raise Exception("Table not found in external database. {}".format(e))
             except AttributeError as e:
-                ## need to cater multiple primary keys
+                ## TODO: need to cater multiple primary keys
                 raise Exception("Something went wrong in your request.")
 
             sel_sql = sql.SQL("""SELECT {} FROM {}""").format(sql.Identifier(pk), sql.Identifier(table))
