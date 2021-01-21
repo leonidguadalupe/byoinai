@@ -29,16 +29,19 @@ class Mssql(object):
                     self.fetch_and_store_data(cursor, self.tables)
 
     def get_tables(self, cursor) -> None:
-        cursor.execute("""
-            select t.name as table_name
-            from sys.tables t
-        """)
+        try:
+            cursor.execute("""
+                select t.name as table_name
+                from sys.tables t
+            """)
+        except pymssql.DatabaseError as e:
+            raise Exception("Something went wrong with your request. {}".format(e))
 
         self.tables = [row['table_name'] for row in cursor]
 
     def get_columns(self, cursor, tables: list) -> None:
         for table in tables:
-
+            
             cursor.execute("""
                 SELECT COLUMN_NAME
                 FROM INFORMATION_SCHEMA.COLUMNS
@@ -68,12 +71,16 @@ class Mssql(object):
     def fetch_and_store_data(self, cursor, tables) -> None:
         for table in tables:
             pk = self.primary_keys_names[table]
-            cursor.execute("""
-                SELECT *
-                FROM {table}
-            """.format(
-                table=table
-            ))
+            try:
+                cursor.execute("""
+                    SELECT *
+                    FROM {table}
+                """.format(
+                    table=table
+                ))
+            except pymssql.DatabaseError as e:
+                raise Exception("Something went wrong with your request. {}".format(e))
+
             for row in cursor:
                 self.all_data[table].append(row)
                 ## instead of looping through the keys later, better to consume a bit memory to store these.

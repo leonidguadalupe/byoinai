@@ -1,9 +1,12 @@
 import copy
 import psycopg2
+
 from contextlib import contextmanager
+from django.core.exceptions import RequestAborted
 from typing import List, Iterable
 from collections import defaultdict
-from psycopg2 import sql
+from psycopg2 import (sql, ProgrammingError, OperationalError, 
+                      DataError, DatabaseError, InternalError)
 
 class Postgres(object):
     def __init__(self, obj, mssql_data, pknames, pks):
@@ -19,7 +22,7 @@ class Postgres(object):
             with self.conn as conn:
                 with conn.cursor() as cursor:
                     ## fill in table names
-                    self.get_tables(cursor,)
+                    self.get_tables(cursor)
 
                     ## fill in column names for schema validation.
                     self.get_columns(cursor, self.tables)
@@ -34,19 +37,24 @@ class Postgres(object):
                     self.delete_outdated_data(cursor, conn)
 
     def get_tables(self, cursor) -> None:
-        cursor.execute("""
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-            ORDER BY table_name
-        """)
+        try:
+            cursor.execute("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """)
+        except ProgrammingError as e:
+            # catching invalid schema name
+            # just in case the internal postgres didn't use public
+            raise Exception("Something went wrong in your request. Schema not found.")
+
         result = [row[0] for row in cursor]
 
         self.tables = result
 
     def get_columns(self, cursor, tables: list) -> None:
         for table in tables:
-
             cursor.execute("""
                 SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{table}'
             """.format(
@@ -66,6 +74,7 @@ class Postgres(object):
                 column_str = sql.SQL(', ').join([sql.Identifier(xa) for xa in columns])
                 columns.remove(pk)
                 column_str_less_pk = sql.SQL(', ').join([sql.Identifier(xa) for xa in columns])
+
                 ## Identifiers are for table names and columns
                 ## Excluded does not belong to both
                 excl_str = sql.SQL(', ').join([sql.SQL('EXCLUDED.') + sql.Identifier(str(column)) for column in columns])
@@ -82,7 +91,11 @@ class Postgres(object):
                             ## lowercase keys. 
                             ## best solution would be to retain case of column names during schema migration using pgloader
                             ## so I'm adding that on TODO
-                            temp = value[co.upper()]
+                            try:
+                                temp = value[co.upper()]
+                            except KeyError as e:
+                                # column not found in the external database.
+                                raise Exception("A column was not found. {}".format(e))
 
                         if temp != None:
                             values_list.append(str(temp))
@@ -91,21 +104,32 @@ class Postgres(object):
                     ## adding %s placeholders for the values
                     placeholder = sql.SQL(', ').join(sql.Placeholder() * len(values_list))
 
-                    ## query does an raw upsert in the database
-                    insert_sql = sql.SQL("""
-                        INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO UPDATE SET ({}) = ({})
-                    """).format(sql.Identifier(table), column_str, placeholder, sql.Identifier(pk), column_str_less_pk, excl_str)
+                    try:
+                        ## query does an raw upsert in the database
+                        insert_sql = sql.SQL("""
+                            INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO UPDATE SET ({}) = ({})
+                        """).format(sql.Identifier(table), column_str, placeholder, sql.Identifier(pk), column_str_less_pk, excl_str)
+                        cursor.execute(insert_sql, values_list)
 
-                    cursor.execute(insert_sql, values_list)
+                    except (ProgrammingError, OperationalError, 
+                        DataError, DatabaseError, InternalError) as e:
+                        raise Exception("Something went wrong in your request. {}".format(e))
 
             conn.commit()
 
     def delete_outdated_data(self, cursor, conn) -> None:
         for table in self.tables:
-            external_keys = self.primary_keys[table]
-            pk = self.primary_keys_names[table].lower()
+            try:
+                external_keys = self.primary_keys[table]
+                pk = self.primary_keys_names[table].lower()
+            except IndexError as e:
+                raise Exception("Table not found in external database. {}".format(e))
+            except AttributeError as e:
+                ## need to cater multiple primary keys
+                raise Exception("Something went wrong in your request.")
 
             sel_sql = sql.SQL("""SELECT {} FROM {}""").format(sql.Identifier(pk), sql.Identifier(table))
+
             cursor.execute(sel_sql)
 
             internal_keys = [row[0] for row in cursor]
@@ -118,5 +142,4 @@ class Postgres(object):
                 del_sql = sql.SQL("""DELETE FROM {} WHERE {} in ({})""").format(
                                 sql.Identifier(table),
                                 sql.Identifier(pk), placeholder)
-                print(del_sql)
                 cursor.execute(del_sql, to_be_deleted)
