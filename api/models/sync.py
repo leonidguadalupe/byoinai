@@ -6,13 +6,13 @@ from .base import BaseModel
 class Sync(BaseModel):
     REQUESTED = 'requested'
     SYNCING = 'syncing'
-    DONE = 'done'
+    SUCCESS = 'success'
     FAILED = 'failed'
 
     STATUS_TYPES = (
           ('requested', REQUESTED),
           ('syncing', SYNCING),
-          ('done', DONE),
+          ('success', SUCCESS),
           ('failed', FAILED)
     )
 
