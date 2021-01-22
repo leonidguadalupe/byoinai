@@ -19,6 +19,8 @@ class DatabaseMeta(type):
                 password = obj.mssql['LAKE_MSSQL_DB_PASSWORD']
 
             except KeyError as e:
+                obj.sync.status = "failed"
+                obj.save()
                 raise Exception(e)
 
             ip = socket.gethostbyname(host)
@@ -38,6 +40,8 @@ class DatabaseMeta(type):
                 user = obj.postgresql['LAKE_DB_USER']
                 password = obj.postgresql['LAKE_DB_PASSWORD']
             except KeyError as e:
+                obj.sync.status = "failed"
+                obj.save()
                 raise Exception(e)
 
             obj.postgres_conn = psycopg2.connect(
@@ -52,6 +56,7 @@ class DatabaseMeta(type):
 
 class DatabaseHelper(object, metaclass=DatabaseMeta):
     def __init__(self, **kwargs):
+        self.sync = kwargs['sync']
         if 'postgresql' in kwargs:
             self.postgresql = kwargs['postgresql']
 
