@@ -47,6 +47,8 @@ class SyncViewSet(viewsets.ViewSet):
         serializer = self.serializer_class(data=request.data)
 
         if serializer.is_valid():
+            sync_obj = serializer.save()
+
             mssql_obj = {
                 'LAKE_MSSQL_DB_NAME': LAKE_MSSQL_DB_NAME,
                 'LAKE_MSSQL_DB_USER': LAKE_MSSQL_DB_USER,
@@ -61,19 +63,24 @@ class SyncViewSet(viewsets.ViewSet):
                 'LAKE_DB_PORT': LAKE_DB_PORT
             }
             # Get connections and cursors using the class helper
-            mhelper = DatabaseHelper(mssql=mssql_obj)
-            phelper = DatabaseHelper(postgresql=psql_obj)
+            mhelper = DatabaseHelper(mssql=mssql_obj, sync=sync_obj)
+            phelper = DatabaseHelper(postgresql=psql_obj, sync=sync_obj)
 
             # Get external data
-            external_db_data = Mssql(mhelper)
+            external_db_data = Mssql(mhelper, sync_obj)
 
             # Use results and sync to postgres
             external_db_data = Postgres(phelper, external_db_data.all_data,
                                         external_db_data.primary_keys_names,
-                                        external_db_data.primary_keys
+                                        external_db_data.primary_keys,
+                                        sync_obj
                                         )
-            serializer.save()
+
+            sync_obj.status = Sync.SUCCESS
+            sync_obj.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            Sync.objects.create(status=Sync.FAILED, message=serializer.errors)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

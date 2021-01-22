@@ -3,7 +3,8 @@ from collections import defaultdict
 
 
 class Mssql(object):
-    def __init__(self, obj):
+    def __init__(self, obj, sync):
+        self.sync = sync
         self.cursor = obj.mssql_cursor
         self.conn = obj.mssql_conn
         self.tables = []
@@ -22,9 +23,6 @@ class Mssql(object):
                     self.get_columns(cursor, self.tables)
 
                     # fill in primary keys
-                    # TODO: we are going to look for foreignkeys
-                    # as well in the future to fill
-                    # that entity first before the concerned table
                     self.get_primary_key_column_names(cursor, self.tables)
 
                     # Get all data and store
@@ -37,6 +35,8 @@ class Mssql(object):
                 from sys.tables t
             """)
         except pymssql.DatabaseError as e:
+            self.sync.status = "failed"
+            self.save()
             raise Exception("Something went wrong with\
                              your request. {}".format(e))
 
@@ -52,7 +52,10 @@ class Mssql(object):
             """.format(
                 table=table
             ))
-            columns = [row['COLUMN_NAME'].lower() for row in cursor if not row['COLUMN_NAME'].startswith('IF_')]
+            columns = [row['COLUMN_NAME'].lower()
+                       for row in cursor
+                       if not row['COLUMN_NAME'].startswith('IF_')]
+
             self.table_columns[table] = columns
 
     def get_primary_key_column_names(self, cursor, tables) -> None:
@@ -73,6 +76,8 @@ class Mssql(object):
                 self.primary_keys_names[table] = cursor.\
                     fetchone()['COLUMN_NAME']
             except KeyError as e:
+                self.sync.status = "failed"
+                self.save()
                 raise Exception("Failed to initialize primary keys.\
                                  Missing key: {}".format(e))
 
@@ -87,6 +92,8 @@ class Mssql(object):
                     table=table
                 ))
             except pymssql.DatabaseError as e:
+                self.sync.status = "failed"
+                self.save()
                 raise Exception("Something went wrong with your request.\
                                 {}".format(e))
 

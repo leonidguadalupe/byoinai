@@ -3,10 +3,17 @@ version: "2"
 volumes:
     store_lake:
         external: true
+
     store_mart:
         external: true
+
     aquila_logs:
         external: true
+
+    aquila_celery_logs:
+        external: true
+
+    redis_data:
 
 services:
 
@@ -25,6 +32,7 @@ services:
         volumes:
             - store_lake:/var/lib/postgresql/data
             - ../backup/migrate.load:/migrate.load
+
     db_mart:
         container_name: postgres
         image: postgres:latest
@@ -37,6 +45,7 @@ services:
             - POSTGRES_HOST=${MART_DB_HOST}
         volumes:
             - store_mart:/var/lib/postgresql/data
+
     app:
         build:
             context: "../"
@@ -49,24 +58,50 @@ services:
         links:
             - db_mart
             - db
-        environment:
-            - LAKE_DB_NAME=${LAKE_DB_NAME}
-            - LAKE_DB_USER=${LAKE_DB_USER}
-            - LAKE_DB_PASSWORD=${LAKE_DB_PASSWORD}
-            - LAKE_DB_HOST=${LAKE_DB_HOST}
-            - LAKE_DB_PORT=${LAKE_DB_PORT}
-            - MART_DB_NAME=${MART_DB_NAME}
-            - MART_DB_USER=${MART_DB_USER}
-            - MART_DB_PASSWORD=${MART_DB_PASSWORD}
-            - MART_DB_HOST=${MART_DB_HOST}
-            - MART_DB_PORT=${MART_DB_PORT}
-            - LAKE_MSSQL_DB_NAME=${LAKE_MSSQL_DB_NAME}
-            - LAKE_MSSQL_DB_USER=${LAKE_MSSQL_DB_USER}
-            - LAKE_MSSQL_DB_PASSWORD=${LAKE_MSSQL_DB_PASSWORD}
-            - LAKE_MSSQL_DB_HOST=${LAKE_MSSQL_DB_HOST}
+        env_file:
+            - ../.env
         ports:
             - "8000:8000"
         volumes:
             - ../:/code
             - aquila_logs:/var/log
         command: python3 manage.py runserver 0.0.0.0:8000
+
+    redis:
+        image: "redis:alpine"
+        restart: always
+        container_name: 'redis'
+        ports:
+            - '127.0.0.1:6379:6379'
+        volumes:
+            - 'redis_data:/data'
+
+    celery:
+        build:
+            context: "../"
+            dockerfile: docker/Dockerfile
+        command: celery -A aquila worker -l info
+        volumes:
+            - aquila_celery_logs:/var/log/aquila_celery.log
+        container_name: aquilaWorker
+        depends_on:
+            - db_mart
+            - db
+            - redis
+        env_file:
+            - ../.env
+
+    celery-beat:
+        build:
+            context: "../"
+            dockerfile: docker/Dockerfile
+        command: celery -A aquila beat -l info --pidfile=
+        volumes:
+            - aquila_celery_logs:/var/log/aquila_celery.log
+        container_name: aquilaBeat
+        depends_on:
+            - db_mart
+            - db
+            - redis
+        env_file:
+            - ../.env
