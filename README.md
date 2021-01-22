@@ -83,7 +83,15 @@ LAKE_MSSQL_DB_USER=SA
 LAKE_MSSQL_DB_PASSWORD=p@ssw0rdm1cr0s0ft
 LAKE_MSSQL_DB_HOST=docker.for.mac.localhost
 ```
-After adding all those information, we need to build the docker-compose yaml file. Do it by entering:
+
+After adding all those information, we need to build the docker-compose yaml file. You need to create the docker volumes first though so do:
+```bash
+docker volume create store_lake
+docker volume create store_mart
+docker volume create aquila_logs
+docker volume create aquila_celery_logs
+```
+Then start building the images from the compose file. Do it by entering:
 ```bash
 build
 ```
