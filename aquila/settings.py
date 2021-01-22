@@ -1,6 +1,7 @@
 import environ
 import os
 
+from celery.schedules import crontab
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -38,20 +39,20 @@ STAGING = 'STAGING'
 PRODUCTION = 'PRODUCTION'
 ENVIRONMENT = env('ENVIRONMENT')
 
-LAKE_DB_NAME=env('LAKE_DB_NAME')
-LAKE_DB_USER=env('LAKE_DB_USER')
-LAKE_DB_PASSWORD=env('LAKE_DB_PASSWORD')
-LAKE_DB_HOST=env('LAKE_DB_HOST')
-LAKE_DB_PORT=env('LAKE_DB_PORT')
-MART_DB_NAME=env('MART_DB_NAME')
-MART_DB_USER=env('MART_DB_USER')
-MART_DB_PASSWORD=env('MART_DB_PASSWORD')
-MART_DB_HOST=env('MART_DB_HOST')
-MART_DB_PORT=env('MART_DB_PORT')
-LAKE_MSSQL_DB_NAME=env('LAKE_MSSQL_DB_NAME')
-LAKE_MSSQL_DB_USER=env('LAKE_MSSQL_DB_USER')
-LAKE_MSSQL_DB_PASSWORD=env('LAKE_MSSQL_DB_PASSWORD')
-LAKE_MSSQL_DB_HOST=env('LAKE_MSSQL_DB_HOST')
+LAKE_DB_NAME = env('LAKE_DB_NAME')
+LAKE_DB_USER = env('LAKE_DB_USER')
+LAKE_DB_PASSWORD = env('LAKE_DB_PASSWORD')
+LAKE_DB_HOST = env('LAKE_DB_HOST')
+LAKE_DB_PORT = env('LAKE_DB_PORT')
+MART_DB_NAME = env('MART_DB_NAME')
+MART_DB_USER = env('MART_DB_USER')
+MART_DB_PASSWORD = env('MART_DB_PASSWORD')
+MART_DB_HOST = env('MART_DB_HOST')
+MART_DB_PORT = env('MART_DB_PORT')
+LAKE_MSSQL_DB_NAME = env('LAKE_MSSQL_DB_NAME')
+LAKE_MSSQL_DB_USER = env('LAKE_MSSQL_DB_USER')
+LAKE_MSSQL_DB_PASSWORD = env('LAKE_MSSQL_DB_PASSWORD')
+LAKE_MSSQL_DB_HOST = env('LAKE_MSSQL_DB_HOST')
 
 # Application definition
 
@@ -161,4 +162,22 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+}
+
+# celery settings
+
+CELERY_BROKER_URL = 'redis://redis:6379'
+CELERY_RESULT_BACKEND = 'redis://redis:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+CELERY_IMPORTS = ['jobs.tasks']
+
+CELERY_BEAT_SCHEDULE = {
+    'sync_external_db': {
+        'task': 'jobs.tasks.sync_external_db',
+        # Syncing of data runs every 2 minutes
+        'schedule': crontab(minute="*/2")
+    }
 }
