@@ -1,5 +1,5 @@
-# AQUILA
-Aquila is a python app used to manage data between different internal and external databases.
+# TEST_ABC
+TEST_ABC is a python app used to manage data between different internal and external databases.
 
 Currently, the implementation of this app involves more python code than raw SQL queries. In the next versions, scalability will be thoroughly considered to speed up the queries and computations.
 
